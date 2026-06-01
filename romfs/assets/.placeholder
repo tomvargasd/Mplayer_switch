@@ -1,0 +1,20 @@
+# Drop your PNG assets here.
+# elf2nro will bundle this entire romfs/ tree into the NRO automatically.
+#
+# Expected structure:
+#
+#   romfs/assets/
+#   ├── background.png          ← Full 1280×720 background
+#   ├── header.png              ← Header bar (1280×60)
+#   ├── footer_hints.png        ← Footer bar with button hints (1280×60)
+#   ├── panel_player.png        ← Left player panel (460×580)
+#   ├── panel_playlist.png      ← Right playlist panel (700×580)
+#   ├── album_art_default.png   ← Default album art (420×320)
+#   ├── progress_bg.png         ← Progress bar track (420×10)
+#   ├── progress_fill.png       ← Progress bar fill (any width, 10px tall)
+#   ├── btn_play.png            ← Play button (90×90)
+#   ├── btn_pause.png           ← Pause button (90×90)
+#   ├── btn_prev.png            ← Previous track (70×70)
+#   ├── btn_next.png            ← Next track (70×70)
+#   └── fonts/
+#       └── regular.ttf         ← Font for track names (requires SDL2_ttf)
