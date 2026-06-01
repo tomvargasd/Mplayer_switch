@@ -1,0 +1,15 @@
+# Compiled output
+build/
+*.elf
+*.nro
+*.nacp
+*.nso
+*.pfs0
+*.map
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+*.swp
