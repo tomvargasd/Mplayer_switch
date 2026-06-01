@@ -13,7 +13,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 # APP metadata — edit these before distributing
 #---------------------------------------------------------------------------------
 APP_TITLE   := MP3 Player
-APP_AUTHOR  := YourName
+APP_AUTHOR  := Tomvargasd
 APP_VERSION := 0.1.0
 
 #---------------------------------------------------------------------------------
