@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MP3 Player — Theme Editor</title>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f17;color:#d0d0e8;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Top bar ──────────────────────────────────────────────────────────── */
+#topbar{background:#1a1a2e;padding:10px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #2a2a4a;flex-shrink:0}
+#topbar h1{font-size:1rem;font-weight:600;color:#8ab4f8;white-space:nowrap}
+#topbar select,#topbar input,#topbar button{background:#252540;border:1px solid #3a3a5a;color:#d0d0e8;border-radius:6px;padding:5px 10px;font-size:.85rem}
+#topbar button{cursor:pointer;background:#3a5080;border-color:#5aaaff;color:#fff}
+#topbar button:hover{background:#4a60a0}
+#topbar .spacer{flex:1}
+
+/* ── Main layout ─────────────────────────────────────────────────────── */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* ── Left panel — controls ───────────────────────────────────────────── */
+#sidebar{width:370px;flex-shrink:0;background:#12121e;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:0;border-right:1px solid #2a2a4a}
+
+.section-title{font-size:.7rem;font-weight:700;text-transform:uppercase;color:#8ab4f8;letter-spacing:.08em;padding:14px 0 6px}
+.section-title:first-child{padding-top:0}
+
+/* colour row */
+.color-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;gap:8px}
+.color-row label{font-size:.8rem;color:#aaaacc;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.color-row .hint{font-size:.68rem;color:#555577;white-space:nowrap}
+.color-row input[type=color]{width:36px;height:26px;border:none;background:none;cursor:pointer;padding:0;border-radius:4px}
+.color-row input[type=text]{width:78px;background:#1e1e30;border:1px solid #3a3a5a;color:#d0d0e8;border-radius:4px;padding:3px 5px;font-size:.78rem;font-family:monospace}
+
+/* asset row */
+.asset-row{display:flex;flex-direction:column;padding:4px 0;gap:3px}
+.asset-row label{font-size:.8rem;color:#aaaacc}
+.asset-row .asset-sub{display:flex;align-items:center;gap:6px}
+.asset-row .size-hint{font-size:.68rem;color:#5aaaff;font-family:monospace;white-space:nowrap}
+.asset-row input[type=text]{flex:1;background:#1e1e30;border:1px solid #3a3a5a;color:#d0d0e8;border-radius:4px;padding:4px 6px;font-size:.78rem}
+
+/* meta row */
+.meta-row{display:flex;flex-direction:column;gap:3px;padding:4px 0}
+.meta-row label{font-size:.8rem;color:#aaaacc}
+.meta-row input[type=text]{background:#1e1e30;border:1px solid #3a3a5a;color:#d0d0e8;border-radius:4px;padding:5px 8px;font-size:.85rem;width:100%}
+
+/* ── Right panel — preview ───────────────────────────────────────────── */
+#preview-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:#080810;overflow:auto;padding:20px}
+
+/* screen-wrap occupies the SCALED layout size; screen transforms inside it */
+#screen-wrap{
+  position:relative;
+  overflow:hidden;
+  flex-shrink:0;
+}
+#screen{
+  width:1280px;height:720px;
+  transform-origin:top left;
+  position:relative;  /* relative so #screen-wrap auto-sizes to 1280x720 until JS scales it */
+  /* background set by JS */
+}
+
+/* ── Preview sub-elements — positions mirror main.cpp layout ─────────── */
+/*  All values are EXACT pixels matching the C++ render code.             */
+
+#prev-bg   {position:absolute;inset:0}                          /* 1280×720 */
+#prev-hdr  {position:absolute;left:0;top:0;width:1280px;height:60px}     /* Header bar */
+#prev-ftr  {position:absolute;left:0;top:660px;width:1280px;height:60px} /* Footer bar */
+
+/* Player panel  x=40 y=70 w=460 h=580 */
+#prev-pp   {position:absolute;left:40px;top:70px;width:460px;height:580px;border:2px solid}
+
+/* Album art  x=60 y=90 w=420 h=320 */
+#prev-art  {position:absolute;left:60px;top:90px;width:420px;height:320px;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#555}
+
+/* Track name area  x=60 y=425 w=420 h=36 */
+#prev-name {position:absolute;left:60px;top:425px;width:420px;height:36px;display:flex;align-items:center;padding:0 10px;font-size:.85rem;overflow:hidden}
+
+/* Progress bar bg  x=60 y=475 w=420 h=10 */
+#prev-prog-bg   {position:absolute;left:60px;top:475px;width:420px;height:10px}
+/* Progress fill  (static 33% demo) */
+#prev-prog-fill {position:absolute;left:60px;top:475px;width:140px;height:10px}
+
+/* Buttons
+   Prev   x=80  y=500 w=70 h=70
+   Play   x=195 y=490 w=90 h=90
+   Next   x=350 y=500 w=70 h=70  */
+#prev-btn-prev {position:absolute;left:80px; top:500px;width:70px;height:70px;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:1.4rem;border-radius:8px}
+#prev-btn-play {position:absolute;left:195px;top:490px;width:90px;height:90px;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:1.8rem;border-radius:50%}
+#prev-btn-next {position:absolute;left:350px;top:500px;width:70px;height:70px;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:1.4rem;border-radius:8px}
+
+/* Playlist panel  x=540 y=70 w=700 h=580 */
+#prev-lp   {position:absolute;left:540px;top:70px;width:700px;height:580px;border:2px solid}
+
+/* Playlist rows — JS renders them dynamically, positioned relative to #prev-lp */
+#playlist-rows{position:absolute;inset:0;overflow:hidden;}
+
+/* Header / footer text */
+#prev-hdr-txt {position:absolute;left:0;top:0;width:1280px;height:60px;display:flex;align-items:center;padding:0 24px;font-weight:600;font-size:.95rem}
+#prev-ftr-txt {position:absolute;left:0;top:660px;width:1280px;height:60px;display:flex;align-items:center;padding:0 24px;font-size:.78rem;gap:20px}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────── */
+#sidebar::-webkit-scrollbar{width:6px}
+#sidebar::-webkit-scrollbar-track{background:#0f0f17}
+#sidebar::-webkit-scrollbar-thumb{background:#3a3a5a;border-radius:3px}
+</style>
+</head>
+<body>
+
+{# ══ Jinja2 macros — must be defined BEFORE first use ══════════════════ #}
+{% macro color_row(key, label, hint, value) %}
+<div class="color-row" data-section="colors" data-key="{{ key }}">
+  <label title="{{ hint }}">{{ label }}</label>
+  <span class="hint">{{ hint }}</span>
+  <input type="color"  class="c-picker" value="{{ value }}" oninput="syncColor(this)"/>
+  <input type="text"   class="c-hex"    value="{{ value }}" oninput="syncHex(this)" maxlength="7"/>
+</div>
+{% endmacro %}
+
+{% macro asset_row(key, label, size, value) %}
+<div class="asset-row" data-section="assets" data-key="{{ key }}">
+  <div class="asset-sub">
+    <label>{{ label }}</label>
+    <span class="size-hint">{{ size }}</span>
+  </div>
+  <div class="asset-sub">
+    <input type="text" placeholder="e.g. background.png" value="{{ value }}"/>
+  </div>
+</div>
+{% endmacro %}
+
+<!-- ═══════════════════════════════════════════════════════ TOP BAR ══════ -->
+<div id="topbar">
+  <h1>🎮 MP3 Player — Theme Editor</h1>
+
+  <select id="sel-theme" title="Load a saved theme">
+    {% for t in themes %}
+    <option value="{{ t }}" {% if t == current %}selected{% endif %}>{{ t }}</option>
+    {% endfor %}
+    <option value="__new__" {% if current == '__new__' %}selected{% endif %}>— New theme —</option>
+  </select>
+
+  <input type="text" id="inp-theme-name" placeholder="theme name"
+         value="{{ '' if current == '__new__' else current }}" style="width:150px"/>
+
+  <button onclick="saveTheme()">💾 Save</button>
+  <button onclick="exportTheme()">⬇ Export JSON</button>
+  <button onclick="deleteTheme()" style="background:#6a2020;border-color:#ff6060">🗑 Delete</button>
+
+  <span class="spacer"></span>
+  <span style="font-size:.75rem;color:#555577">Preview scales to fit your window</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ MAIN ══════════ -->
+<div id="main">
+
+  <!-- ───────────────────── LEFT SIDEBAR ──────────────────────────────── -->
+  <div id="sidebar">
+
+    <!-- META -->
+    <div class="section-title">📋 Theme Info</div>
+    <div class="meta-row"><label>Display name</label><input type="text" id="meta-name"    value="{{ theme.meta.name }}"/></div>
+    <div class="meta-row"><label>Author</label>      <input type="text" id="meta-author"  value="{{ theme.meta.author }}"/></div>
+    <div class="meta-row"><label>Version</label>     <input type="text" id="meta-version" value="{{ theme.meta.version }}"/></div>
+
+    <!-- SURFACE COLOURS -->
+    <div class="section-title">🖼 Surface Colours</div>
+    {{ color_row("background",     "Background",       "1280×720 – full screen",  theme.colors.background)   }}
+    {{ color_row("panel_player",   "Player Panel",     "460×580 – left card",     theme.colors.panel_player) }}
+    {{ color_row("panel_playlist", "Playlist Panel",   "700×580 – right card",    theme.colors.panel_playlist) }}
+    {{ color_row("header",         "Header Bar",       "1280×60",                 theme.colors.header) }}
+    {{ color_row("footer",         "Footer Bar",       "1280×60",                 theme.colors.footer) }}
+    {{ color_row("album_art_bg",   "Album Art Bg",     "420×320 placeholder",     theme.colors.album_art_bg) }}
+
+    <!-- ACCENT / HIGHLIGHT -->
+    <div class="section-title">✨ Accent &amp; Highlight</div>
+    {{ color_row("accent",        "Accent",           "borders, active elements", theme.colors.accent) }}
+    {{ color_row("selected_row",  "Selected Row",     "playlist cursor bg",       theme.colors.selected_row) }}
+    {{ color_row("now_playing",   "Now Playing",      "playing row outline",      theme.colors.now_playing) }}
+
+    <!-- TEXT COLOURS -->
+    <div class="section-title">🔤 Text Colours</div>
+    {{ color_row("text_primary",   "Primary Text",    "track name, headers",    theme.colors.text_primary)   }}
+    {{ color_row("text_secondary", "Secondary Text",  "artist, timestamps",     theme.colors.text_secondary) }}
+    {{ color_row("text_hint",      "Hint Text",       "footer button labels",   theme.colors.text_hint)      }}
+
+    <!-- PROGRESS BAR -->
+    <div class="section-title">⏩ Progress Bar</div>
+    {{ color_row("progress_bg",   "Bar Track",   "420×10 – background",   theme.colors.progress_bg)   }}
+    {{ color_row("progress_fill", "Bar Fill",    "420×10 – filled part",  theme.colors.progress_fill) }}
+
+    <!-- BUTTONS -->
+    <div class="section-title">🎮 Buttons</div>
+    {{ color_row("btn_normal",  "Normal Button",  "Prev / Next bg  70×70",  theme.colors.btn_normal)  }}
+    {{ color_row("btn_primary", "Primary Button", "Play / Pause bg  90×90", theme.colors.btn_primary) }}
+    {{ color_row("btn_icon",    "Button Icon",    "icon/glyph colour",      theme.colors.btn_icon)    }}
+
+    <!-- SCROLLBAR -->
+    <div class="section-title">📜 Scrollbar</div>
+    {{ color_row("scrollbar_bg",    "Track",  "6px wide vertical bar",  theme.colors.scrollbar_bg)    }}
+    {{ color_row("scrollbar_thumb", "Thumb",  "draggable indicator",    theme.colors.scrollbar_thumb) }}
+
+    <!-- ASSETS -->
+    <div class="section-title">📁 PNG Assets (optional)</div>
+    <p style="font-size:.72rem;color:#555577;margin-bottom:4px">
+      Paths relative to <code>romfs/themes/&lt;name&gt;/</code>.<br>
+      Leave blank to use the colour fallback above.
+    </p>
+
+    {{ asset_row("background",        "Background",        "1280 × 720 px",     theme.assets.background)          }}
+    {{ asset_row("header",            "Header",            "1280 × 60 px",      theme.assets.header)               }}
+    {{ asset_row("footer",            "Footer",            "1280 × 60 px",      theme.assets.footer)               }}
+    {{ asset_row("panel_player",      "Player Panel",      "460 × 580 px",      theme.assets.panel_player)         }}
+    {{ asset_row("panel_playlist",    "Playlist Panel",    "700 × 580 px",      theme.assets.panel_playlist)       }}
+    {{ asset_row("album_art_default", "Default Album Art", "420 × 320 px",      theme.assets.album_art_default)    }}
+    {{ asset_row("progress_bg",       "Progress Track",    "420 × 10 px",       theme.assets.progress_bg)          }}
+    {{ asset_row("progress_fill",     "Progress Fill",     "1 × 10 px (tiled)", theme.assets.progress_fill)        }}
+    {{ asset_row("btn_play",          "Btn Play",          "90 × 90 px",        theme.assets.btn_play)             }}
+    {{ asset_row("btn_pause",         "Btn Pause",         "90 × 90 px",        theme.assets.btn_pause)            }}
+    {{ asset_row("btn_prev",          "Btn Prev",          "70 × 70 px",        theme.assets.btn_prev)             }}
+    {{ asset_row("btn_next",          "Btn Next",          "70 × 70 px",        theme.assets.btn_next)             }}
+    {{ asset_row("font_regular",      "Font Regular",      "TTF — 22 pt",       theme.assets.font_regular)         }}
+    {{ asset_row("font_small",        "Font Small",        "TTF — 16 pt",       theme.assets.font_small)           }}
+
+  </div><!-- /sidebar -->
+
+  <!-- ───────────────────── PREVIEW ───────────────────────────────────── -->
+  <div id="preview-wrap">
+    <!-- screen-wrap is sized to 1280*scale × 720*scale in JS -->
+    <div id="screen-wrap">
+      <!-- All children use screen-absolute coordinates matching C++ RECT_* constants -->
+      <div id="screen">
+
+        <!-- Layer 0: full-screen background  1280×720 -->
+        <div id="prev-bg"></div>
+
+        <!-- Layer 1: header / footer bars -->
+        <div id="prev-hdr"></div>
+        <div id="prev-ftr"></div>
+        <div id="prev-hdr-txt">🎵 MP3 Player</div>
+        <div id="prev-ftr-txt">
+          <span id="ftr-a">A Play</span>
+          <span id="ftr-b">B Pause</span>
+          <span id="ftr-lr">L/R Prev/Next</span>
+          <span id="ftr-plus">Y Themes  + Exit</span>
+        </div>
+
+        <!-- Layer 2: panel background cards (no children — just fills) -->
+        <!-- Player panel  x=40 y=70 w=460 h=580 -->
+        <div id="prev-pp"></div>
+        <!-- Playlist panel  x=540 y=70 w=700 h=580 -->
+        <div id="prev-lp">
+          <div id="playlist-rows"></div>
+        </div>
+
+        <!-- Layer 3: player elements at screen-absolute positions -->
+        <!-- These coordinates match C++ RECT_* exactly and must be             -->
+        <!-- direct children of #screen (position:absolute) to resolve correctly -->
+        <div id="prev-art">album art</div>                <!--  x=60  y=90  w=420 h=320 -->
+        <div id="prev-name">01. Track Name Example.mp3</div> <!-- x=60  y=425 w=420 h=36  -->
+        <div id="prev-prog-bg"></div>                    <!--  x=60  y=475 w=420 h=10  -->
+        <div id="prev-prog-fill"></div>                  <!--  x=60  y=475 w=140 h=10  -->
+        <div id="prev-btn-prev">⏮</div>                 <!--  x=80  y=500 w=70  h=70  -->
+        <div id="prev-btn-play">▶</div>                  <!--  x=195 y=490 w=90  h=90  -->
+        <div id="prev-btn-next">⏭</div>                 <!--  x=350 y=500 w=70  h=70  -->
+
+      </div><!-- /screen -->
+    </div><!-- /screen-wrap -->
+  </div><!-- /preview-wrap -->
+
+</div><!-- /main -->
+
+<!-- ═══════════════════════════════════════════════════════ SCRIPTS ═══════ -->
+<script>
+// ── Gather current theme from the form ──────────────────────────────────
+function getThemeData() {
+  const d = {
+    meta: {
+      name:    document.getElementById("meta-name").value,
+      author:  document.getElementById("meta-author").value,
+      version: document.getElementById("meta-version").value
+    },
+    colors: {},
+    assets: {}
+  };
+
+  document.querySelectorAll("[data-section='colors']").forEach(row => {
+    d.colors[row.dataset.key] = row.querySelector(".c-hex").value;
+  });
+
+  document.querySelectorAll("[data-section='assets']").forEach(row => {
+    d.assets[row.dataset.key] = row.querySelector("input[type=text]").value;
+  });
+
+  return d;
+}
+
+// ── Live preview update ──────────────────────────────────────────────────
+function updatePreview() {
+  const d = getThemeData();
+  const c = d.colors;
+
+  // Background
+  document.getElementById("prev-bg").style.background        = c.background;
+  document.getElementById("screen").style.background         = c.background;
+
+  // Header / footer
+  const hdr = document.getElementById("prev-hdr");
+  hdr.style.background = c.header;
+  document.getElementById("prev-hdr-txt").style.color        = c.text_primary;
+
+  const ftr = document.getElementById("prev-ftr");
+  ftr.style.background = c.footer;
+  document.querySelectorAll("#prev-ftr-txt span").forEach(s => s.style.color = c.text_hint);
+
+  // Player panel
+  const pp = document.getElementById("prev-pp");
+  pp.style.background    = c.panel_player;
+  pp.style.borderColor   = c.accent;
+
+  // Album art
+  const art = document.getElementById("prev-art");
+  art.style.background = c.album_art_bg;
+  art.style.borderColor = c.accent;
+  art.style.border      = `2px solid ${c.accent}`;
+  art.style.color       = c.text_hint;
+
+  // Track name
+  const nm = document.getElementById("prev-name");
+  nm.style.background = c.btn_normal;
+  nm.style.color      = c.text_primary;
+
+  // Progress
+  document.getElementById("prev-prog-bg").style.background   = c.progress_bg;
+  document.getElementById("prev-prog-fill").style.background = c.progress_fill;
+
+  // Buttons
+  const btnPrev = document.getElementById("prev-btn-prev");
+  btnPrev.style.background  = c.btn_normal;
+  btnPrev.style.borderColor = c.accent;
+  btnPrev.style.color       = c.btn_icon;
+
+  const btnPlay = document.getElementById("prev-btn-play");
+  btnPlay.style.background  = c.btn_primary;
+  btnPlay.style.borderColor = c.accent;
+  btnPlay.style.color       = c.btn_icon;
+
+  const btnNext = document.getElementById("prev-btn-next");
+  btnNext.style.background  = c.btn_normal;
+  btnNext.style.borderColor = c.accent;
+  btnNext.style.color       = c.btn_icon;
+
+  // Playlist panel
+  const lp = document.getElementById("prev-lp");
+  lp.style.background  = c.panel_playlist;
+  lp.style.borderColor = c.accent;
+
+  // Playlist rows (demo: 10 rows, row 2 selected, row 5 playing)
+  const container = document.getElementById("playlist-rows");
+  container.innerHTML = "";
+  const tracks = [
+    "01. Bohemian Rhapsody.mp3",
+    "02. Stairway to Heaven.mp3",  // selected
+    "03. Hotel California.mp3",
+    "04. Comfortably Numb.mp3",
+    "05. November Rain.mp3",       // now playing
+    "06. Under the Bridge.mp3",
+    "07. Smells Like Teen Spirit.mp3",
+    "08. Black.mp3",
+    "09. Wish You Were Here.mp3",
+    "10. Nothing Else Matters.mp3"
+  ];
+
+  tracks.forEach((t, i) => {
+    const row = document.createElement("div");
+    row.style.cssText = `
+      position:absolute;left:2px;top:${i * 50}px;
+      width:694px;height:48px;
+      display:flex;align-items:center;padding:0 14px;
+      font-size:.78rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+      background:${i === 1 ? c.selected_row : "transparent"};
+      color:${c.text_primary};
+      outline:${i === 4 ? `2px solid ${c.now_playing}` : "none"};
+      box-sizing:border-box;
+    `;
+    row.textContent = t;
+    container.appendChild(row);
+  });
+}
+
+// ── Colour input sync ────────────────────────────────────────────────────
+function syncColor(picker) {
+  const row = picker.closest("[data-section]");
+  row.querySelector(".c-hex").value = picker.value;
+  updatePreview();
+}
+
+function syncHex(hex) {
+  const val = hex.value;
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    const row = hex.closest("[data-section]");
+    row.querySelector(".c-picker").value = val;
+    updatePreview();
+  }
+}
+
+// ── Preview scaling ───────────────────────────────────────────────────────
+// #screen is 1280×720 (position:relative). #screen-wrap clips it via overflow:hidden.
+// JS scales #screen with transform and shrinks #screen-wrap to the visual size
+// so the wrapper occupies only the scaled footprint, not the original 1280×720.
+function scalePreview() {
+  const wrap       = document.getElementById("preview-wrap");
+  const screenWrap = document.getElementById("screen-wrap");
+  const screenEl   = document.getElementById("screen");
+  const availW = wrap.clientWidth  - 40;
+  const availH = wrap.clientHeight - 40;
+  if (availW <= 0 || availH <= 0) return;  // layout not ready yet
+  const scale  = Math.min(availW / 1280, availH / 720);
+  screenEl.style.transform    = `scale(${scale})`;
+  screenWrap.style.width  = Math.round(1280 * scale) + "px";
+  screenWrap.style.height = Math.round(720  * scale) + "px";
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────
+async function saveTheme() {
+  const name = document.getElementById("inp-theme-name").value.trim();
+  if (!name) { alert("Enter a theme name first."); return; }
+  const data = getThemeData();
+  const res  = await fetch(`/api/theme/${encodeURIComponent(name)}`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
+  if (res.ok) {
+    alert(`Theme "${name}" saved!`);
+    // Refresh theme list
+    const themes = await (await fetch("/api/themes")).json();
+    const sel    = document.getElementById("sel-theme");
+    sel.innerHTML = themes.map(t =>
+      `<option value="${t}"${t === name ? " selected" : ""}>${t}</option>`
+    ).join("") + `<option value="__new__">— New theme —</option>`;
+  } else {
+    alert("Save failed.");
+  }
+}
+
+async function exportTheme() {
+  const name = document.getElementById("inp-theme-name").value.trim();
+  if (!name) { alert("Save the theme first."); return; }
+  window.location.href = `/api/theme/${encodeURIComponent(name)}/export`;
+}
+
+async function deleteTheme() {
+  const name = document.getElementById("sel-theme").value;
+  if (name === "__new__" || !name) return;
+  if (!confirm(`Delete theme "${name}"?`)) return;
+  await fetch(`/api/theme/${encodeURIComponent(name)}`, { method: "DELETE" });
+  window.location.href = "/";
+}
+
+// Load a theme from the selector
+document.getElementById("sel-theme").addEventListener("change", async function() {
+  const name = this.value;
+  if (name === "__new__") {
+    window.location.href = "/?theme=__new__";
+    return;
+  }
+  window.location.href = `/?theme=${encodeURIComponent(name)}`;
+});
+
+// Also update the name input when selector changes
+document.getElementById("sel-theme").addEventListener("change", function() {
+  if (this.value !== "__new__")
+    document.getElementById("inp-theme-name").value = this.value;
+});
+
+// ── Asset fields — any change triggers preview ───────────────────────────
+document.querySelectorAll("[data-section='assets'] input").forEach(el => {
+  el.addEventListener("input", updatePreview);
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+// Use 'load' so layout is fully computed before scalePreview reads clientWidth/Height
+window.addEventListener("load", () => { scalePreview(); updatePreview(); });
+window.addEventListener("resize", scalePreview);
+
+</script>
+</body>
+</html>
