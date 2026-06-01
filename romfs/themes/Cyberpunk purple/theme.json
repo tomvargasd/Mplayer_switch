@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "name": "Purple",
+    "author": "Tomvargasd",
+    "version": "1.0.0"
+  },
+  "colors": {
+    "background": "#000000",
+    "panel_player": "#1f0b27",
+    "panel_playlist": "#000000",
+    "header": "#1a1a2e",
+    "footer": "#1a1a2e",
+    "album_art_bg": "#1f1523",
+    "accent": "#000000",
+    "selected_row": "#938319",
+    "now_playing": "#F3D926",
+    "text_primary": "#ffffff",
+    "text_secondary": "#aaaacc",
+    "text_hint": "#666688",
+    "progress_bg": "#444444",
+    "progress_fill": "#F3D926",
+    "btn_normal": "#390c51",
+    "btn_primary": "#c933cb",
+    "btn_icon": "#ffffff",
+    "scrollbar_bg": "#320b32",
+    "scrollbar_thumb": "#ff40ff"
+  },
+  "assets": {
+    "background": "",
+    "header": "Header.png",
+    "footer": "",
+    "panel_player": "playbox.png",
+    "panel_playlist": "",
+    "album_art_default": "default.png",
+    "progress_bg": "",
+    "progress_fill": "",
+    "btn_play": "play.png",
+    "btn_pause": "pause.png",
+    "btn_prev": "prev.png",
+    "btn_next": "next.png",
+    "font_regular": "",
+    "font_small": ""
+  }
+}
