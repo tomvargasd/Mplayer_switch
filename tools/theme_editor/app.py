@@ -12,6 +12,9 @@ import json
 import os
 import shutil
 from flask import Flask, render_template, request, jsonify, send_file
+from werkzeug.utils import secure_filename
+
+ASSET_ALLOWED_EXTS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ttf', '.otf'}
 
 app = Flask(__name__)
 
@@ -171,6 +174,42 @@ def api_delete_theme(name):
     if os.path.isdir(folder):
         shutil.rmtree(folder)
     return jsonify({"ok": True})
+
+
+@app.route("/api/theme/<name>/asset", methods=["POST"])
+def api_upload_asset(name):
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({"error": "Empty filename"}), 400
+    filename = secure_filename(f.filename)
+    if not filename:
+        return jsonify({"error": "Invalid filename"}), 400
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ASSET_ALLOWED_EXTS:
+        return jsonify({"error": f"File type {ext} not allowed"}), 400
+    real_themes = os.path.realpath(THEMES_DIR)
+    real_folder = os.path.realpath(os.path.join(THEMES_DIR, name))
+    if not real_folder.startswith(real_themes + os.sep):
+        return jsonify({"error": "Invalid theme name"}), 400
+    os.makedirs(real_folder, exist_ok=True)
+    f.save(os.path.join(real_folder, filename))
+    return jsonify({"ok": True, "filename": filename})
+
+
+@app.route("/api/theme/<name>/asset/<path:filename>")
+def api_get_asset(name, filename):
+    real_themes = os.path.realpath(THEMES_DIR)
+    real_folder = os.path.realpath(os.path.join(THEMES_DIR, name))
+    if not real_folder.startswith(real_themes + os.sep):
+        return jsonify({"error": "Invalid theme name"}), 400
+    real_filepath = os.path.realpath(os.path.join(real_folder, filename))
+    if not real_filepath.startswith(real_folder + os.sep):
+        return jsonify({"error": "Invalid filename"}), 400
+    if not os.path.isfile(real_filepath):
+        return jsonify({"error": "Not found"}), 404
+    return send_file(real_filepath)
 
 
 if __name__ == "__main__":

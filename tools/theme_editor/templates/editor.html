@@ -39,6 +39,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f17;color:#d0d0e
 .asset-row .asset-sub{display:flex;align-items:center;gap:6px}
 .asset-row .size-hint{font-size:.68rem;color:#5aaaff;font-family:monospace;white-space:nowrap}
 .asset-row input[type=text]{flex:1;background:#1e1e30;border:1px solid #3a3a5a;color:#d0d0e8;border-radius:4px;padding:4px 6px;font-size:.78rem}
+.asset-thumb{width:48px;height:36px;object-fit:cover;border-radius:4px;border:1px solid #3a3a5a;display:none;flex-shrink:0}
+.asset-thumb.visible{display:block}
+.asset-pick-btn{background:#252540;border:1px solid #3a3a5a;color:#8ab4f8;border-radius:4px;padding:3px 7px;font-size:.75rem;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.asset-pick-btn:hover{background:#333355}
 
 /* meta row */
 .meta-row{display:flex;flex-direction:column;gap:3px;padding:4px 0}
@@ -125,7 +129,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f17;color:#d0d0e
     <span class="size-hint">{{ size }}</span>
   </div>
   <div class="asset-sub">
+    <img class="asset-thumb" src="" alt="" onerror="this.classList.remove('visible');this.src=''"/>
     <input type="text" placeholder="e.g. background.png" value="{{ value }}"/>
+    <button class="asset-pick-btn" type="button" onclick="pickAsset(this)" title="Browse file">📂</button>
+    <input type="file" class="asset-file-input" style="display:none"
+           accept="image/png,image/jpeg,image/gif,image/webp,.ttf,.otf"
+           onchange="onAssetFile(this)"/>
   </div>
 </div>
 {% endmacro %}
@@ -273,6 +282,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f17;color:#d0d0e
 
 <!-- ═══════════════════════════════════════════════════════ SCRIPTS ═══════ -->
 <script>
+// ── Pending asset file uploads ───────────────────────────────────────────
+const pendingUploads = {}; // assetKey -> File object
+const assetBlobUrls  = {}; // assetKey -> blob URL (for live preview)
+
 // ── Gather current theme from the form ──────────────────────────────────
 function getThemeData() {
   const d = {
@@ -302,26 +315,27 @@ function updatePreview() {
   const c = d.colors;
 
   // Background
-  document.getElementById("prev-bg").style.background        = c.background;
-  document.getElementById("screen").style.background         = c.background;
+  applyBg(document.getElementById("prev-bg"), c.background, "background");
+  document.getElementById("screen").style.backgroundColor    = c.background;
 
   // Header / footer
   const hdr = document.getElementById("prev-hdr");
-  hdr.style.background = c.header;
+  applyBg(hdr, c.header, "header");
   document.getElementById("prev-hdr-txt").style.color        = c.text_primary;
 
   const ftr = document.getElementById("prev-ftr");
-  ftr.style.background = c.footer;
+  applyBg(ftr, c.footer, "footer");
   document.querySelectorAll("#prev-ftr-txt span").forEach(s => s.style.color = c.text_hint);
 
   // Player panel
   const pp = document.getElementById("prev-pp");
-  pp.style.background    = c.panel_player;
+  applyBg(pp, c.panel_player, "panel_player");
   pp.style.borderColor   = c.accent;
 
   // Album art
   const art = document.getElementById("prev-art");
-  art.style.background = c.album_art_bg;
+  applyBg(art, c.album_art_bg, "album_art_default");
+  art.textContent = getAssetUrl("album_art_default") ? "" : "album art";
   art.style.borderColor = c.accent;
   art.style.border      = `2px solid ${c.accent}`;
   art.style.color       = c.text_hint;
@@ -332,28 +346,28 @@ function updatePreview() {
   nm.style.color      = c.text_primary;
 
   // Progress
-  document.getElementById("prev-prog-bg").style.background   = c.progress_bg;
-  document.getElementById("prev-prog-fill").style.background = c.progress_fill;
+  applyBg(document.getElementById("prev-prog-bg"),   c.progress_bg,   "progress_bg");
+  applyBg(document.getElementById("prev-prog-fill"),  c.progress_fill, "progress_fill");
 
   // Buttons
   const btnPrev = document.getElementById("prev-btn-prev");
-  btnPrev.style.background  = c.btn_normal;
+  applyBg(btnPrev, c.btn_normal,  "btn_prev");
   btnPrev.style.borderColor = c.accent;
   btnPrev.style.color       = c.btn_icon;
 
   const btnPlay = document.getElementById("prev-btn-play");
-  btnPlay.style.background  = c.btn_primary;
+  applyBg(btnPlay, c.btn_primary, "btn_play");
   btnPlay.style.borderColor = c.accent;
   btnPlay.style.color       = c.btn_icon;
 
   const btnNext = document.getElementById("prev-btn-next");
-  btnNext.style.background  = c.btn_normal;
+  applyBg(btnNext, c.btn_normal,  "btn_next");
   btnNext.style.borderColor = c.accent;
   btnNext.style.color       = c.btn_icon;
 
   // Playlist panel
   const lp = document.getElementById("prev-lp");
-  lp.style.background  = c.panel_playlist;
+  applyBg(lp, c.panel_playlist, "panel_playlist");
   lp.style.borderColor = c.accent;
 
   // Playlist rows (demo: 10 rows, row 2 selected, row 5 playing)
@@ -405,6 +419,75 @@ function syncHex(hex) {
   }
 }
 
+// ── Asset file picker ─────────────────────────────────────────────────────
+function pickAsset(btn) {
+  btn.nextElementSibling.click();
+}
+
+function onAssetFile(input) {
+  const file  = input.files[0];
+  if (!file) return;
+  const row   = input.closest("[data-section='assets']");
+  const key   = row.dataset.key;
+  const txt   = row.querySelector("input[type=text]");
+  const thumb = row.querySelector(".asset-thumb");
+
+  txt.value = file.name;
+  pendingUploads[key] = file;
+
+  if (file.type.startsWith("image/")) {
+    if (assetBlobUrls[key]) URL.revokeObjectURL(assetBlobUrls[key]);
+    assetBlobUrls[key] = URL.createObjectURL(file);
+    thumb.src = assetBlobUrls[key];
+    thumb.classList.add("visible");
+  } else {
+    thumb.classList.remove("visible");
+    thumb.src = "";
+  }
+  updatePreview();
+}
+
+// ── Asset URL resolver (blob or server path) ──────────────────────────────
+function getAssetUrl(key) {
+  if (assetBlobUrls[key]) return assetBlobUrls[key];
+  const row = document.querySelector(`[data-section='assets'][data-key='${key}']`);
+  if (!row) return "";
+  const val = row.querySelector("input[type=text]").value.trim();
+  if (!val) return "";
+  const name = document.getElementById("inp-theme-name").value.trim();
+  if (!name) return "";
+  return `/api/theme/${encodeURIComponent(name)}/asset/${encodeURIComponent(val)}`;
+}
+
+// ── Apply background colour + optional image to a preview element ─────────
+function applyBg(el, colorVal, assetKey) {
+  const url = getAssetUrl(assetKey);
+  if (url) {
+    el.style.backgroundImage    = `url('${url}')`;
+    el.style.backgroundSize     = "cover";
+    el.style.backgroundPosition = "center";
+    el.style.backgroundRepeat   = "no-repeat";
+    el.style.backgroundColor    = colorVal;
+  } else {
+    el.style.backgroundImage = "";
+    el.style.backgroundColor = colorVal;
+  }
+}
+
+// ── Initialize thumbnails for assets that already have a filename ─────────
+function initAssetThumbs() {
+  const name = document.getElementById("inp-theme-name").value.trim();
+  if (!name) return;
+  document.querySelectorAll("[data-section='assets']").forEach(row => {
+    const val   = row.querySelector("input[type=text]").value.trim();
+    const thumb = row.querySelector(".asset-thumb");
+    if (val) {
+      thumb.src = `/api/theme/${encodeURIComponent(name)}/asset/${encodeURIComponent(val)}`;
+      thumb.classList.add("visible");
+    }
+  });
+}
+
 // ── Preview scaling ───────────────────────────────────────────────────────
 // #screen is 1280×720 (position:relative). #screen-wrap clips it via overflow:hidden.
 // JS scales #screen with transform and shrinks #screen-wrap to the visual size
@@ -426,6 +509,24 @@ function scalePreview() {
 async function saveTheme() {
   const name = document.getElementById("inp-theme-name").value.trim();
   if (!name) { alert("Enter a theme name first."); return; }
+
+  // Upload any pending asset files first
+  for (const [key, file] of Object.entries(pendingUploads)) {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    const up = await fetch(`/api/theme/${encodeURIComponent(name)}/asset`, {
+      method: "POST",
+      body: fd
+    });
+    if (up.ok) {
+      const result = await up.json();
+      // Update text field with actual saved filename (may have been sanitized)
+      const row = document.querySelector(`[data-section='assets'][data-key='${key}']`);
+      if (row) row.querySelector("input[type=text]").value = result.filename;
+      delete pendingUploads[key];
+    }
+  }
+
   const data = getThemeData();
   const res  = await fetch(`/api/theme/${encodeURIComponent(name)}`, {
     method: "POST",
@@ -475,14 +576,31 @@ document.getElementById("sel-theme").addEventListener("change", function() {
     document.getElementById("inp-theme-name").value = this.value;
 });
 
-// ── Asset fields — any change triggers preview ───────────────────────────
-document.querySelectorAll("[data-section='assets'] input").forEach(el => {
-  el.addEventListener("input", updatePreview);
+// ── Asset text fields — update thumbnail + preview on manual input ─────────
+document.querySelectorAll("[data-section='assets'] input[type=text]").forEach(el => {
+  el.addEventListener("input", function() {
+    const row   = this.closest("[data-section='assets']");
+    const key   = row.dataset.key;
+    const thumb = row.querySelector(".asset-thumb");
+    const val   = this.value.trim();
+    if (val && !pendingUploads[key]) {
+      const nm = document.getElementById("inp-theme-name").value.trim();
+      if (nm) {
+        const url = `/api/theme/${encodeURIComponent(nm)}/asset/${encodeURIComponent(val)}`;
+        thumb.src = url;
+        thumb.classList.add("visible");
+      }
+    } else if (!val) {
+      thumb.classList.remove("visible");
+      thumb.src = "";
+    }
+    updatePreview();
+  });
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────
 // Use 'load' so layout is fully computed before scalePreview reads clientWidth/Height
-window.addEventListener("load", () => { scalePreview(); updatePreview(); });
+window.addEventListener("load", () => { scalePreview(); updatePreview(); initAssetThumbs(); });
 window.addEventListener("resize", scalePreview);
 
 </script>
