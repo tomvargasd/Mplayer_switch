@@ -14,7 +14,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE   := MP3 Player
 APP_AUTHOR  := Tomvargasd
-APP_VERSION := 0.1.0
+APP_VERSION := 0.1.1
 
 #---------------------------------------------------------------------------------
 # TARGET   — final binary name (no extension)
