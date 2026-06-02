@@ -7,7 +7,7 @@
   "colors": {
     "background": "#0E0E0E",
     "panel_player": "#272727",
-    "panel_playlist": "",
+    "panel_playlist": "#0E0E0E",
     "header": "#0E0E0E",
     "footer": "#0E0E0E",
     "album_art_bg": "#272727",
