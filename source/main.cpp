@@ -57,10 +57,10 @@ static constexpr SDL_Rect RECT_PROG_BG  = {60,  475, 420,  10};
 static constexpr SDL_Rect RECT_BTN_PRV  = {90,  500, 70,   70};
 
 //  Btn Play:     x=195  y=490  w=90    h=90
-static constexpr SDL_Rect RECT_BTN_PLY  = {205, 490, 90,   90};
+static constexpr SDL_Rect RECT_BTN_PLY  = {220, 490, 90,   90};
 
 //  Btn Next:     x=350  y=500  w=70    h=70
-static constexpr SDL_Rect RECT_BTN_NXT  = {360, 500, 70,   70};
+static constexpr SDL_Rect RECT_BTN_NXT  = {365, 500, 70,   70};
 
 //  Playlist:     x=540  y=70   w=700   h=580
 static constexpr SDL_Rect RECT_PLAYLIST = {540, 70,  700,  580};
@@ -550,7 +550,8 @@ static void renderPlayer(SDL_Renderer* r, TTF_Font* fntBig, TTF_Font* fntMed,
             if (idx == s.playingIndex)  outlineRect(r, row, th.nowPlaying);
             SDL_Color tc = th.textPrimary;
             int ty = rowY + (ROW_H - TTF_FontHeight(fntSmall)) / 2;
-            renderText(r, fntSmall, trackDisplayName(s.playlist[idx]),
+            std::string trackConNumero = std::to_string(idx + 1) + ". " + trackDisplayName(s.playlist[idx]);
+            renderText(r, fntSmall, trackConNumero,
                        RECT_PLAYLIST.x + 10, ty, tc, RECT_PLAYLIST.w - 20);
         }
     }
@@ -708,6 +709,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
     scanMusicDir(state);
 
+    appletSetMediaPlaybackState(true);
+
     bool running = true;
     while (running && appletMainLoop()) {
 
@@ -827,6 +830,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
     stopAudio(state);       // calls Mix_HaltMusic + Mix_FreeMusic internally
     Mix_HaltMusic();        // explicit second call: safe no-op if already halted
     Mix_AllocateChannels(0); // release all mixer channels
+
+    appletSetMediaPlaybackState(false);
 
     // 2. Free GPU textures before destroying the renderer.
     theme.destroy();
