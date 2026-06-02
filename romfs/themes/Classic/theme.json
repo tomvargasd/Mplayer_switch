@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "name": "Classic",
+    "author": "Tomvargas",
+    "version": "1.0.0"
+  },
+  "colors": {
+    "background": "#0E0E0E",
+    "panel_player": "#272727",
+    "panel_playlist": "",
+    "header": "#0E0E0E",
+    "footer": "#0E0E0E",
+    "album_art_bg": "#272727",
+    "accent": "#272727",
+    "selected_row": "#232323",
+    "now_playing": "#ffffff",
+    "text_primary": "#ebebeb",
+    "text_secondary": "#aaaacc",
+    "text_hint": "#666688",
+    "progress_bg": "#444444",
+    "progress_fill": "#ffffff",
+    "btn_normal": "#272727",
+    "btn_primary": "#232323",
+    "btn_icon": "#ffffff",
+    "scrollbar_bg": "#000000",
+    "scrollbar_thumb": "#5aaaff"
+  },
+  "assets": {
+    "background": "bg.png",
+    "header": "",
+    "footer": "",
+    "panel_player": "",
+    "panel_playlist": "",
+    "album_art_default": "album.png",
+    "progress_bg": "",
+    "progress_fill": "",
+    "btn_play": "Frame_10.png",
+    "btn_pause": "",
+    "btn_prev": "Frame_9.png",
+    "btn_next": "Frame_11.png",
+    "font_regular": "",
+    "font_small": ""
+  }
+}
